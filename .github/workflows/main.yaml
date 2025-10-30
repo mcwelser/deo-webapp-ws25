@@ -19,7 +19,7 @@ jobs:
         with:
           dotnet-version: 9
       - name: Build
-        run: 
+        run: |
           dotnet build Deo.Backend
           dotnet build Deo.Frontend
       - name: Upload artifacts
