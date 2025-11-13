@@ -33,6 +33,7 @@ jobs:
 
   test:
     runs-on: self-hosted
+    needs: build
     steps:
 
       - name: Check out repository code
