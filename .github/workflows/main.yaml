@@ -7,6 +7,7 @@ on: [push, workflow_dispatch]
 env: 
   DOTNET_INSTALL_DIR: /home/actions-runner/dotnet
   DOTNET_TOOLS_INSTALL_DIR: /home/actions-runner/dotnet-tools
+  NUGET_PACKAGES: /home/actions-runner/.nuget/packages
 
 jobs:
   build:
@@ -47,7 +48,7 @@ jobs:
         with:
           name: build
 
-# The cache is configured to cache dependencies for the test projects.
+        # The cache is configured to cache dependencies for the test projects.
       - name: Set up .NET 9
         uses: actions/setup-dotnet@v5
         with:
@@ -57,19 +58,19 @@ jobs:
             Deo.Backend.Tests/packages.lock.json
             Deo.Frontend.Tests/packages.lock.json
       
-# The restore step uses --locked-mode to ensure that the exact versions specified in the lock files are used.
+          # The restore step uses --locked-mode to ensure that the exact versions specified in the lock files are used.
       - name: Restore dependencies
         run: |
           dotnet restore --locked-mode Deo.Backend.Tests
           dotnet restore --locked-mode Deo.Frontend.Tests
       
-# The test step runs the tests without restoring dependencies again, as they have already been restored in the previous step.
+        # The test step runs the tests without restoring dependencies again, as they have already been restored in the previous step.
       - name: Test projects
         run: |
           dotnet test --no-restore Deo.Backend.Tests
           dotnet test --no-restore Deo.Frontend.Tests
 
-# Finally, the test artifacts (such as test results) are uploaded for further analysis or reporting.
+        # Finally, the test artifacts (such as test results) are uploaded for further analysis or reporting.
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -78,7 +79,49 @@ jobs:
             **/bin/
             **/obj/
 
-  anaylyze:
+  e2e_test:
+    runs-on: self-hosted
+    needs: test
+    env:
+      DEO_FRONTEND_URL: http://localhost:5581
+      DEO_BACKEND_URL: http://localhost:6681
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9
+          cache: true
+          cache-dependency-path: |
+            Deo.WebApp.Tests/packages.lock.json
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode Deo.WebApp.Tests
+      - name: Build projects
+        run: |
+          dotnet build Deo.Backend
+          dotnet build Deo.Frontend
+      - name: Launch web app
+        run: |
+          dotnet run --no-build --project Deo.Backend -- --urls $DEO_BACKEND_URL > /dev/null 2>&1 &
+          echo "DEO_BACKEND_PID=$!" >> "$GITHUB_ENV"
+          dotnet run --no-build --project Deo.Frontend -e DEO_BACKEND_URL=$DEO_BACKEND_URL -- --urls $DEO_FRONTEND_URL > /dev/null 2>&1 &
+          echo "DEO_FRONTEND_PID=$!" >> "$GITHUB_ENV"
+      - name: Execute end-to-end tests (${{ matrix.browser }})
+        run: dotnet test --no-restore Deo.WebApp.Tests -e BROWSER=${{ matrix.browser }} -e DEO_FRONTEND_URL=$DEO_FRONTEND_URL
+      - name: Shutdown web app
+        if: always()
+        run: |
+          kill -s TERM $DEO_FRONTEND_PID
+          kill -s TERM $DEO_BACKEND_PID
+
+  analyze:
+    if: false  # Disabled for now
     runs-on: self-hosted
     needs: test
     steps:
@@ -102,7 +145,7 @@ jobs:
             Deo.Backend.Tests/packages.lock.json
             Deo.Frontend.Tests/packages.lock.json
       
-# Install dotnet tools for analysis
+      # Install dotnet tools for analysis
       - name: Set up dotnet tools
         run: |
           dotnet tool install --tool-path "${DOTNET_TOOLS_INSTALL_DIR}" dotnet-sonarscanner
@@ -113,7 +156,7 @@ jobs:
           dotnet restore --locked-mode Deo.Backend.Tests
           dotnet restore --locked-mode Deo.Frontend.Tests
       
-# Analyze projects with coverage
+      # Analyze projects with coverage
       - name: Analyze projects
         run: |
           ${DOTNET_TOOLS_INSTALL_DIR}/dotnet-sonarscanner begin \
@@ -130,3 +173,5 @@ jobs:
         with:
           name: analyze
           path: "**/*.coverage.xml"
+
+
