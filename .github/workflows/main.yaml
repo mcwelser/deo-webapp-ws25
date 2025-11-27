@@ -55,8 +55,8 @@ jobs:
           dotnet-version: 8
           cache: true
           cache-dependency-path: |
-            Deo.Backend.Tests/packages.lock.json
-            Deo.Frontend.Tests/packages.lock.json
+            Deo.Backend.Tests/Deo.Backend.Tests.csproj
+            Deo.Frontend.Tests/Deo.Frontend.Tests.csproj
       
           # The restore step uses --locked-mode to ensure that the exact versions specified in the lock files are used.
       - name: Restore dependencies
@@ -101,7 +101,7 @@ jobs:
           dotnet-version: 8
           cache: true
           cache-dependency-path: |
-            Deo.WebApp.Tests/packages.lock.json
+            Deo.WebApp.Tests/Deo.WebApp.Tests.csproj
       - name: Restore dependencies
         run: dotnet restore --locked-mode Deo.WebApp.Tests
       - name: Build projects
@@ -176,4 +176,23 @@ jobs:
           name: analyze
           path: "**/*.coverage.xml"
 
-
+  security:
+    runs-on: self-hosted
+    needs: test
+    permissions:
+      security-events: write
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Analyze projects
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
