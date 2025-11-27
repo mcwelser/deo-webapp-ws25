@@ -44,15 +44,15 @@ jobs:
           fetch-depth: 0 # fetches all history for all branches and tags
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           name: build
 
         # The cache is configured to cache dependencies for the test projects.
-      - name: Set up .NET 9
-        uses: actions/setup-dotnet@v5
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9
+          dotnet-version: 8
           cache: true
           cache-dependency-path: |
             Deo.Backend.Tests/packages.lock.json
@@ -92,13 +92,13 @@ jobs:
         browser: [chromium, firefox, webkit]
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up .NET 9
-        uses: actions/setup-dotnet@v5
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9
+          dotnet-version: 8
           cache: true
           cache-dependency-path: |
             Deo.WebApp.Tests/packages.lock.json
