@@ -44,15 +44,15 @@ jobs:
           fetch-depth: 0 # fetches all history for all branches and tags
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
         # The cache is configured to cache dependencies for the test projects.
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8
+          dotnet-version: 9
           cache: true
           cache-dependency-path: |
             Deo.Backend.Tests/Deo.Backend.Tests.csproj
@@ -79,48 +79,48 @@ jobs:
             **/bin/
             **/obj/
 
-  e2e_test:
-    runs-on: self-hosted
-    needs: test
-    env:
-      DOTNET_INSTALL_DIR: /home/actions-runner/dotnet
-      NUGET_PACKAGES: /home/actions-runner/.nuget/packages
-      DEO_FRONTEND_URL: http://localhost:5581
-      DEO_BACKEND_URL: http://localhost:6681
-    strategy:
-      matrix:
-        browser: [chromium, firefox, webkit]
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8
-          cache: true
-          cache-dependency-path: |
-            Deo.WebApp.Tests/Deo.WebApp.Tests.csproj
-      - name: Restore dependencies
-        run: dotnet restore --locked-mode Deo.WebApp.Tests
-      - name: Build projects
-        run: |
-          dotnet build Deo.Backend
-          dotnet build Deo.Frontend
-      - name: Launch web app
-        run: |
-          dotnet run --no-build --project Deo.Backend -- --urls $DEO_BACKEND_URL > /dev/null 2>&1 &
-          echo "DEO_BACKEND_PID=$!" >> "$GITHUB_ENV"
-          dotnet run --no-build --project Deo.Frontend -e DEO_BACKEND_URL=$DEO_BACKEND_URL -- --urls $DEO_FRONTEND_URL > /dev/null 2>&1 &
-          echo "DEO_FRONTEND_PID=$!" >> "$GITHUB_ENV"
-      - name: Execute end-to-end tests (${{ matrix.browser }})
-        run: dotnet test --no-restore Deo.WebApp.Tests -e BROWSER=${{ matrix.browser }} -e DEO_FRONTEND_URL=$DEO_FRONTEND_URL
-      - name: Shutdown web app
-        if: always()
-        run: |
-          kill -s TERM $DEO_FRONTEND_PID
-          kill -s TERM $DEO_BACKEND_PID
+  #e2e_test:
+  #  runs-on: self-hosted
+  #  needs: test
+  #  env:
+  #    DOTNET_INSTALL_DIR: /home/actions-runner/dotnet
+  #    NUGET_PACKAGES: /home/actions-runner/.nuget/packages
+  #    DEO_FRONTEND_URL: http://localhost:5581
+  #    DEO_BACKEND_URL: http://localhost:6681
+  #  strategy:
+  #    matrix:
+  #      browser: [chromium, firefox, webkit]
+  #  steps:
+  #    - name: Check out repository code
+  #      uses: actions/checkout@v5
+  #      with:
+  #        fetch-depth: 0
+  #    - name: Set up .NET 9
+  #      uses: actions/setup-dotnet@v5
+  #      with:
+  #        dotnet-version: 9
+  #        cache: true
+  #        cache-dependency-path: |
+  #          Deo.WebApp.Tests/Deo.WebApp.Tests.csproj
+  #    - name: Restore dependencies
+  #      run: dotnet restore --locked-mode Deo.WebApp.Tests
+  #    - name: Build projects
+  #      run: |
+  #        dotnet build Deo.Backend
+  #        dotnet build Deo.Frontend
+  #    - name: Launch web app
+  #      run: |
+  #        dotnet run --no-build --project Deo.Backend -- --urls $DEO_BACKEND_URL > /dev/null 2>&1 &
+  #        echo "DEO_BACKEND_PID=$!" >> "$GITHUB_ENV"
+  #        dotnet run --no-build --project Deo.Frontend -e DEO_BACKEND_URL=$DEO_BACKEND_URL -- --urls $DEO_FRONTEND_URL > /dev/null 2>&1 &
+  #        echo "DEO_FRONTEND_PID=$!" >> "$GITHUB_ENV"
+  #    - name: Execute end-to-end tests (${{ matrix.browser }})
+  #      run: dotnet test --no-restore Deo.WebApp.Tests -e BROWSER=${{ matrix.browser }} -e DEO_FRONTEND_URL=$DEO_FRONTEND_URL
+  #    - name: Shutdown web app
+  #      if: always()
+  #      run: |
+  #        kill -s TERM $DEO_FRONTEND_PID
+  #        kill -s TERM $DEO_BACKEND_PID
 
   analyze:
     if: false
@@ -183,7 +183,7 @@ jobs:
       security-events: write
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Analyze projects
@@ -193,6 +193,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'

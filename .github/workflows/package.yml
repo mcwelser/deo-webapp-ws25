@@ -1,0 +1,53 @@
+name: Packaging Pipeline
+
+run-name: Package triggered by ${{ github.actor }} 🙌
+
+on:
+  push:
+    tags:
+      - v*
+
+env: 
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository_owner }}-backend # deo-webapp
+  
+jobs:
+  build-and-push-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+      attestations: write
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            latest
+      - name: Build and push backend image
+        id: push-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Deo.Backend
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+      - name: Generate artifact attestation for backend image
+        uses: actions/attest-build-provenance@1
+        with:
+          subject-name : ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          subject-digest : ${{ steps.push-backend.outputs.digest }}
