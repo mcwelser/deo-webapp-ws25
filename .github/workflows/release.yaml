@@ -1,0 +1,26 @@
+name: Release Pipeline
+
+run-name: Release triggered by ${{ github.actor }} 🚀
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "${tag}" \
+            --repo="$github.repository" \
+            --title="${GITHUB_REPOSITORY#*/}" ${tag} \
+            --generate-notes
+            
